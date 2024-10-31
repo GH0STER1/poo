@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Country Voting</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #flags {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .flag-button {
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+        .count {
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="voting-container">
+        <h1>Vote for Your Country</h1>
+        <input type="text" id="username" placeholder="Enter your username" />
+        <input type="text" id="search" placeholder="Search for a country" />
+        <div id="flags"></div>
+    </div>
+    <script>
+        const flagsContainer = document.getElementById('flags');
+        const searchInput = document.getElementById('search');
+        let flagsData = [];
+
+        async function fetchCountryData() {
+            const response = await fetch('https://restcountries.com/v3.1/all');
+            flagsData = await response.json();
+            displayFlags(flagsData);
+        }
+
+        function displayFlags(countries) {
+            flagsContainer.innerHTML = '';
+            countries.forEach(country => {
+                const button = document.createElement('button');
+                button.className = 'flag-button';
+                button.dataset.country = country.name.common;
+                button.innerHTML = `
+                    <img src="${country.flags.svg}" alt="${country.name.common} Flag" width="100" />
+                    <span class="count">0</span>
+                `;
+                button.addEventListener('click', () => vote(country.name.common));
+                flagsContainer.appendChild(button);
+            });
+        }
+
+        function vote(country) {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                alert('Please enter your username!');
+                return;
+            }
+
+            fetch('/vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, country }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const countElement = [...flagsContainer.children].find(btn => btn.dataset.country === country).querySelector('.count');
+                    countElement.textContent = data.newCount;
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredCountries = flagsData.filter(country => country.name.common.toLowerCase().includes(searchTerm));
+            displayFlags(filteredCountries);
+        });
+
+        fetchCountryData();
+    </script>
+</body>
+</html>
